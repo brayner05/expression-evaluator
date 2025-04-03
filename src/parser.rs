@@ -1,7 +1,4 @@
-use core::fmt;
-use std::path::Display;
-
-use crate::lexer::{LexerError, Token};
+use crate::lexer::{Token};
 
 
 #[derive(Debug)]
@@ -54,6 +51,10 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Get the next token in the token stream, or `None` if no more tokens exist,
+    /// without advancing in the token stream.
+    /// 
     fn peek(&self) -> Option<&Token> {
         if !self.has_next() {
             return None;
@@ -63,6 +64,10 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Get the next token in the token stream and advance in the stream,
+    /// or an error if no more tokens exist in the token stream.
+    /// 
     fn advance(&mut self) -> Result<&Token, ParserError> {
         if !self.has_next() {
             return Err(ParserError::new("Cannot read past the end of the token stream."))
@@ -75,6 +80,10 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Parse a factor, which is either a terminal such as a number,
+    /// or in the case that the next token is a '(', a nested expression.
+    /// 
     fn parse_factor(&mut self) -> Result<Box<AstNode>, ParserError> {
         let next_token = self.advance();
         if let Err(e) = next_token {
@@ -88,6 +97,9 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Parse a term by splitting it into factors.
+    /// 
     fn parse_term(&mut self) -> Result<Box<AstNode>, ParserError> {
         let mut left_hand = self.parse_factor()?;
 
@@ -115,6 +127,13 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Parse an expression by splitting it into terms.
+    /// 
+    /// # Returns
+    /// A `Result<Box<AstNode>, ParserError>` in which, on success,
+    /// holds an abstract syntax tree representing the expression.
+    /// 
     fn parse_expression(&mut self) -> Result<Box<AstNode>, ParserError> {
         let mut left_hand = self.parse_term()?;
 
@@ -142,6 +161,11 @@ impl <'a> Parser<'a> {
     }
 
 
+    ///
+    /// Parse an abstract syntax tree from a stream of tokens.
+    /// 
+    /// # Returns
+    /// A `Result` encapsulating either a `Box<AstNode>` or a `ParserError`.
     pub fn parse(&mut self) -> Result<Box<AstNode>, ParserError> {
         let root = self.parse_expression();
         match root {
