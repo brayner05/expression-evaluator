@@ -1,5 +1,5 @@
 use core::fmt;
-use std::fmt::write;
+
 
 #[derive(Debug)]
 pub enum Token {
@@ -41,6 +41,7 @@ pub struct LexerError {
     pub message: String
 }
 
+
 impl LexerError {
     fn new(message: &str) -> Self {
         LexerError { message: message.to_string() }
@@ -66,9 +67,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
+
     fn has_next(&self) -> bool {
         (self.current_position as usize) < self.source.len()
     }
+
 
     fn advance(&mut self) -> Result<char, LexerError> {
         let next_char = self.source
@@ -84,6 +87,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+
     fn peek(&self) -> char {
         if !self.has_next() {
             return '\0'
@@ -95,9 +99,11 @@ impl<'a> Lexer<'a> {
                 .unwrap()
     }
 
+
     fn add_token(&mut self, token: Box<Token>) {
         self.token_list.push(token);
     }
+
 
     fn scan_number(&mut self) -> Result<(), LexerError> {
         while self.has_next() && self.peek().is_digit(10) {
@@ -129,6 +135,7 @@ impl<'a> Lexer<'a> {
         }
 
     }
+
 
     fn scan_next(&mut self) -> Result<(), LexerError> {
         let next = self.advance();
@@ -176,6 +183,7 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
+    
     ///
     /// Convert an input string to a list of tokens.
     /// 
