@@ -1,5 +1,6 @@
 mod lexer;
 mod parser;
+mod expression;
 
 use std::io::{self, Write};
 use lexer::Lexer;

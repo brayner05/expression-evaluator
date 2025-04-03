@@ -1,7 +1,7 @@
 use core::fmt;
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
     // Miscellaneaous
     EOF,

@@ -81,6 +81,26 @@ impl <'a> Parser<'a> {
 
 
     ///
+    /// Parse an expression between parentheses.
+    /// 
+    fn parse_parentheses(&mut self) -> Result<Box<AstNode>, ParserError> {
+        let expression = self.parse_expression();
+        
+        if let None = self.peek() {
+            return Err(ParserError::new("Expected: ')'"));
+        }
+
+        match *self.peek().unwrap() {
+            Token::RightParen => {
+                self.advance()?;
+                return expression;
+            }
+            _ => Err(ParserError::new("Expected: ')'"))
+        }
+    }
+
+
+    ///
     /// Parse a factor, which is either a terminal such as a number,
     /// or in the case that the next token is a '(', a nested expression.
     /// 
@@ -90,7 +110,7 @@ impl <'a> Parser<'a> {
             return Err(e);
         }
         match *next_token.unwrap() {
-            Token::LeftParen => self.parse_expression(),
+            Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
             _ => Err(ParserError::new("Expected an expression."))
         }
