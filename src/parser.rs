@@ -1,4 +1,4 @@
-use crate::lexer::{Token};
+use crate::lexer::Token;
 
 
 #[derive(Debug)]
@@ -11,9 +11,14 @@ pub enum BinaryOperationType {
 }
 
 #[derive(Debug)]
+pub enum UnaryOperationType {
+    Negate
+}
+
+#[derive(Debug)]
 pub enum AstNode {
     BinaryOperation(BinaryOperationType, Box<AstNode>, Box<AstNode>),
-    UnaryOperation(BinaryOperationType, Box<AstNode>),
+    UnaryOperation(UnaryOperationType, Box<AstNode>),
     Number(f64)
 }
 
@@ -100,6 +105,20 @@ impl <'a> Parser<'a> {
     }
 
 
+    fn parse_negation(&mut self) -> Result<Box<AstNode>, ParserError> {
+        let expression = self.parse_expression();
+        if let None = self.peek() {
+            return Err(ParserError::new("Expected an expression"));
+        }
+        Ok(Box::new(
+            AstNode::UnaryOperation(
+                UnaryOperationType::Negate, 
+                expression.unwrap()
+            )
+        ))
+    }
+
+
     ///
     /// Parse a factor, which is either a terminal such as a number,
     /// or in the case that the next token is a '(', a nested expression.
@@ -112,6 +131,7 @@ impl <'a> Parser<'a> {
         match *next_token.unwrap() {
             Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
+            Token::Minus => self.parse_negation(),
             _ => Err(ParserError::new("Expected an expression."))
         }
     }

@@ -3,6 +3,7 @@ mod parser;
 mod expression;
 
 use std::io::{self, Write};
+use expression::execute;
 use lexer::Lexer;
 use parser::Parser;
 
@@ -46,7 +47,10 @@ fn run_repl() {
             continue;
         }
 
-        println!("{:?}", ast.unwrap());
+        // println!("{:?}", ast.unwrap());
+
+        let result_value = execute(&ast.unwrap());
+        println!("\t= {}", result_value);
 
         line.clear();
     }
