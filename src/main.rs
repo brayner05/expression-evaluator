@@ -2,15 +2,76 @@ mod lexer;
 mod parser;
 mod expression;
 
+use core::fmt;
 use std::io::{self, Write};
 use expression::execute;
 use lexer::Lexer;
 use parser::Parser;
 
+
+#[derive(Debug)]
+enum ApplicationError {
+    ParserError(parser::ParserError),
+    LexerError(lexer::LexerError)
+}
+
+
+impl fmt::Display for ApplicationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApplicationError::ParserError(parser_error) =>
+                write!(f, "{}", parser_error.message),
+
+            ApplicationError::LexerError(lexer_error) => 
+                write!(f, "{}", lexer_error.message),
+        }
+    }
+}
+
+
+fn report_error(error: &ApplicationError) {
+    println!("[ \x1b[31mError\x1b[39m ]: {}", error);
+}
+
+
+///
+/// Compute a raw expression and get the result of the computation
+/// 
+/// # Arguments
+/// * `raw_expression` An immutable reference to the raw expression as a string.
+/// 
+/// # Return
+/// A `Result<f64, ApplicationError>` in which the `Ok()` value (`f64`) is the
+/// result of the computation and the error represents any error that happened during 
+/// computation of the expression.
+/// 
+fn compute_expression(raw_expression: &str) -> Result<f64, ApplicationError> {
+    let mut tokenizer = Lexer::new(raw_expression);
+
+    // Convert the expression to a stream of tokens.
+    let tokens = tokenizer.tokenize();
+    if let Err(e) = tokens {
+        return Err(ApplicationError::LexerError(e));
+    }
+
+    let mut parser = Parser::new(tokens.unwrap());
+
+    // Convert the token stream to an abstract syntax tree.
+    let ast = parser.parse();
+    if let Err(e) = ast {
+        return Err(ApplicationError::ParserError(e));
+    }
+
+    // Walk through the AST and compute the result.
+    let result_value = execute(&ast.unwrap());
+    Ok(result_value)
+}
+
+
 ///
 /// Continouously reads lines from the user until the specified exit command
 /// is entered. Then for every line entered, considers that line to be an expression,
-/// and then computes the result of that expression.
+/// and then computes the result_value of that expression.
 /// 
 fn run_repl() {
     let mut line = String::new();
@@ -29,35 +90,35 @@ fn run_repl() {
         }
 
         // Tokenize the input string.
-        let mut tokenizer = Lexer::new(line.trim());
-        let tokens = tokenizer.tokenize();
+        let computation_result = compute_expression(line.trim());
 
-        if let Err(e) = tokens {
-            eprintln!("{}", e.message);
-            line.clear();
-            continue;
+        match computation_result {
+            Ok(result_value) => {
+                println!("\t= {}", result_value)
+            },
+            Err(e) => {
+                report_error(&e);
+            },
         }
-
-        let mut parser = Parser::new(tokens.unwrap());
-        let ast = parser.parse();
-
-        if let Err(e) = ast {
-            eprintln!("{}", e.message);
-            line.clear();
-            continue;
-        }
-
-        // println!("{:?}", ast.unwrap());
-
-        let result_value = execute(&ast.unwrap());
-        println!("\t= {}", result_value);
 
         line.clear();
     }
 }
 
 
-fn main() -> io::Result<()> {    
-    run_repl();
+fn main() -> io::Result<()> {   
+    let arguments: Vec<String> = std::env::args().collect();
+    if arguments.len() < 2 {
+        run_repl();
+        return Ok(());
+    }
+
+    let input = &arguments[1];
+    let computation_result = compute_expression(input);
+    match computation_result {
+        Ok(result) => println!("\t= {}", result),
+        Err(e) => report_error(&e),
+    }
+
     Ok(())
 }

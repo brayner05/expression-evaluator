@@ -1,6 +1,6 @@
 use crate::lexer::Token;
 
-
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum BinaryOperationType {
     Add,
@@ -86,10 +86,10 @@ impl <'a> Parser<'a> {
 
 
     ///
-    /// Parse an expression between parentheses.
+    /// Parse an factor between parentheses.
     /// 
     fn parse_parentheses(&mut self) -> Result<Box<AstNode>, ParserError> {
-        let expression = self.parse_expression();
+        let factor = self.parse_expression();
         
         if let None = self.peek() {
             return Err(ParserError::new("Expected: ')'"));
@@ -98,7 +98,7 @@ impl <'a> Parser<'a> {
         match *self.peek().unwrap() {
             Token::RightParen => {
                 self.advance()?;
-                return expression;
+                return factor;
             }
             _ => Err(ParserError::new("Expected: ')'"))
         }
@@ -106,14 +106,14 @@ impl <'a> Parser<'a> {
 
 
     fn parse_negation(&mut self) -> Result<Box<AstNode>, ParserError> {
-        let expression = self.parse_expression();
+        let operand = self.parse_factor();
         if let None = self.peek() {
-            return Err(ParserError::new("Expected an expression"));
+            return Err(ParserError::new("Expected an factor"));
         }
         Ok(Box::new(
             AstNode::UnaryOperation(
                 UnaryOperationType::Negate, 
-                expression.unwrap()
+                operand.unwrap()
             )
         ))
     }
@@ -121,7 +121,7 @@ impl <'a> Parser<'a> {
 
     ///
     /// Parse a factor, which is either a terminal such as a number,
-    /// or in the case that the next token is a '(', a nested expression.
+    /// or in the case that the next token is a '(', a nested factor.
     /// 
     fn parse_factor(&mut self) -> Result<Box<AstNode>, ParserError> {
         let next_token = self.advance();
@@ -132,7 +132,7 @@ impl <'a> Parser<'a> {
             Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
             Token::Minus => self.parse_negation(),
-            _ => Err(ParserError::new("Expected an expression."))
+            _ => Err(ParserError::new("Expected an factor."))
         }
     }
 
@@ -168,11 +168,11 @@ impl <'a> Parser<'a> {
 
 
     ///
-    /// Parse an expression by splitting it into terms.
+    /// Parse an factor by splitting it into terms.
     /// 
     /// # Returns
     /// A `Result<Box<AstNode>, ParserError>` in which, on success,
-    /// holds an abstract syntax tree representing the expression.
+    /// holds an abstract syntax tree representing the factor.
     /// 
     fn parse_expression(&mut self) -> Result<Box<AstNode>, ParserError> {
         let mut left_hand = self.parse_term()?;
