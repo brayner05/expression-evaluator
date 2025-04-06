@@ -113,8 +113,9 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let input = &arguments[1];
-    let computation_result = compute_expression(input);
+    let input = arguments[1..].join(" ");
+
+    let computation_result = compute_expression(&input);
     match computation_result {
         Ok(result) => println!("\t= {}", result),
         Err(e) => report_error(&e),
