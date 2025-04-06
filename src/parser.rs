@@ -30,7 +30,7 @@ pub struct ParserError {
 
 
 impl ParserError {
-    fn new(message: &str) -> Self {
+    fn new(message: String) -> Self {
         ParserError { message: message.to_string() }
     }
 }
@@ -75,7 +75,8 @@ impl <'a> Parser<'a> {
     /// 
     fn advance(&mut self) -> Result<&Token, ParserError> {
         if !self.has_next() {
-            return Err(ParserError::new("Cannot read past the end of the token stream."))
+            return Err(ParserError::new(
+                String::from("Cannot read past the end of the token stream.")))
         }
 
         let next_token = &self.token_stream[self.current_position];
@@ -92,7 +93,8 @@ impl <'a> Parser<'a> {
         let factor = self.parse_expression();
         
         if let None = self.peek() {
-            return Err(ParserError::new("Expected: ')'"));
+            return Err(ParserError::new(
+                String::from("Expected: ')'")));
         }
 
         match *self.peek().unwrap() {
@@ -100,7 +102,8 @@ impl <'a> Parser<'a> {
                 self.advance()?;
                 return factor;
             }
-            _ => Err(ParserError::new("Expected: ')'"))
+            _ => Err(ParserError::new(
+                String::from("Expected: ')', found")))
         }
     }
 
@@ -108,7 +111,8 @@ impl <'a> Parser<'a> {
     fn parse_negation(&mut self) -> Result<Box<AstNode>, ParserError> {
         let operand = self.parse_factor();
         if let None = self.peek() {
-            return Err(ParserError::new("Expected an factor"));
+            return Err(ParserError::new(
+                String::from("Expected a factor")));
         }
         Ok(Box::new(
             AstNode::UnaryOperation(
@@ -132,7 +136,8 @@ impl <'a> Parser<'a> {
             Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
             Token::Minus => self.parse_negation(),
-            _ => Err(ParserError::new("Expected an factor."))
+            _ => Err(ParserError::new(
+                String::from("Expected an factor.")))
         }
     }
 

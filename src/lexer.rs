@@ -43,7 +43,7 @@ pub struct LexerError {
 
 
 impl LexerError {
-    fn new(message: &str) -> Self {
+    fn new(message: String) -> Self {
         LexerError { message: message.to_string() }
     }
 }
@@ -83,7 +83,8 @@ impl<'a> Lexer<'a> {
                 self.current_position += 1;
                 Ok(n)
             },
-            None => Err(LexerError::new("Cannot read past the end of the source."))
+            None => Err(LexerError::new(
+                String::from("Cannot read past the end of the source.")))
         }
     }
 
@@ -131,7 +132,8 @@ impl<'a> Lexer<'a> {
                 self.add_token(Box::new(Token::Number(n)));
                 Ok(())
             },
-            Err(_) => Err(LexerError::new("Failed to parse float."))
+            Err(_) => Err(LexerError::new(
+                String::from("Failed to parse float.")))
         }
 
     }
@@ -176,7 +178,8 @@ impl<'a> Lexer<'a> {
                 }
             }
             _ => {
-                return Err(LexerError::new("Unrecognized token."))
+                return Err(LexerError::new(
+                    format!("Unrecognized token: '{}'", ch)))
             }
         };
 
@@ -209,5 +212,41 @@ impl<'a> Lexer<'a> {
         // No errors occurred so return a success result and
         // the list of tokens.
         Ok(&self.token_list)
+    }
+}
+
+
+///
+/// # Tests
+/// 
+#[cfg(test)]
+mod tests {
+    use super::Lexer;
+
+    #[test]
+    fn scan_next_basic_addition() {
+        let mut lexer = Lexer::new("1 + 2");
+        while lexer.has_next() {
+            lexer.scan_next().expect("Failed to scan token");
+            lexer.token_start = lexer.current_position;
+        }
+        let tokens = lexer.token_list;
+        assert!(if let super::Token::Number(1.0) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::Plus = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Number(2.0) = tokens[2].as_ref() { true } else { false });
+    }
+
+    
+    #[test]
+    fn scan_next_basic_subtraction() {
+        let mut lexer = Lexer::new("1 - 2");
+        while lexer.has_next() {
+            lexer.scan_next().expect("Failed to scan token");
+            lexer.token_start = lexer.current_position;
+        }
+        let tokens = lexer.token_list;
+        assert!(if let super::Token::Number(1.0) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::Minus = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Number(2.0) = tokens[2].as_ref() { true } else { false });
     }
 }
