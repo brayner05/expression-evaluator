@@ -162,6 +162,11 @@ impl <'a> Parser<'a> {
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Divide, left_hand, right_hand));
                 },
+                Token::Modulus => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_factor()?;
+                    left_hand = Box::new(AstNode::BinaryOperation(BinaryOperationType::Modulus, left_hand, right_hand));
+                },
                 _ => {
                     break;
                 }

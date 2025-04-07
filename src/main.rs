@@ -12,7 +12,8 @@ use parser::Parser;
 #[derive(Debug)]
 enum ApplicationError {
     ParserError(parser::ParserError),
-    LexerError(lexer::LexerError)
+    LexerError(lexer::LexerError),
+    ComputationError(expression::ComputationError)
 }
 
 
@@ -20,10 +21,11 @@ impl fmt::Display for ApplicationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ApplicationError::ParserError(parser_error) =>
-                write!(f, "{}", parser_error.message),
-
+                        write!(f, "{}", parser_error.message),
             ApplicationError::LexerError(lexer_error) => 
-                write!(f, "{}", lexer_error.message),
+                        write!(f, "{}", lexer_error.message),
+            ApplicationError::ComputationError(computation_error) => 
+                        write!(f, "{}", computation_error)
         }
     }
 }
@@ -64,7 +66,11 @@ fn compute_expression(raw_expression: &str) -> Result<f64, ApplicationError> {
 
     // Walk through the AST and compute the result.
     let result_value = execute(&ast.unwrap());
-    Ok(result_value)
+    if let Err(e) = result_value {
+        return Err(ApplicationError::ComputationError(e))
+    }
+    
+    Ok(result_value.unwrap())
 }
 
 
@@ -122,4 +128,63 @@ fn main() -> io::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::compute_expression;
+
+    #[test]
+    fn computes_addition() {
+        let source = "1.5 + 2.5";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 4.0);
+    }
+
+
+    #[test]
+    fn computes_subtraction() {
+        let source = "9 - 4.5";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 4.5);
+    }
+
+
+    #[test]
+    fn computes_multiplication_by_zero() {
+        let source = "72.592 * 0";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 0.0);
+    }
+
+
+    #[test]
+    fn computes_multiplication_by_one() {
+        let source = "72.592 * 1";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 72.592);
+    }
+
+    #[test]
+    fn computes_multiplication() {
+        let source = "6 * 2.5";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 15.0);
+    }
+
+
+    #[test]
+    fn computes_division_by_zero() {
+        let source = "1 / 0";
+        let result = compute_expression(source);
+        assert!(result.is_err(), "Expected an error while dividing by 0.");
+    }
+
+
+    #[test]
+    fn computes_modulus() {
+        let source = "15 % 10";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        assert_eq!(result, 5.0);
+    }
 }
