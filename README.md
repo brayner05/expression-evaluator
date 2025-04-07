@@ -1,5 +1,5 @@
-# 💻 🧮 = Expression Parser (`pxpr`) = 🧮 💻
-PXPR is a fast mathematical expression parser written in Rust. I made this project as a way to familiarize myself with the Rust language, and its features. PXPR is essentially a command-line calculator which works by first tokenizing the input, and then recursively parsing the tokens into an abstract syntax tree which is then evaluated by the program.
+# 💻 🧮 = PXPR - Expression Parser = 🧮 💻
+PXPR (**P**arse e**XPR**ession) is a fast mathematical expression parser written in Rust. I made this project as a way to familiarize myself with the Rust language, and its features. PXPR is essentially a command-line calculator which works by first tokenizing the input, and then recursively parsing the tokens into an abstract syntax tree which is then evaluated by the program.
 
 ## Examples
 ### Compute an expression via the CLI
