@@ -24,7 +24,7 @@ expr > 3 - (2 + 5) + 2
 ## Installation
 To install PXPR, clone this repository:
 ```sh
-git clone https://github.com/brayner05/expression-evaluator.git
+git clone https://github.com/brayner05/pxpr.git
 ```
 
 Next, switch to the repository directory and run the installation script:
