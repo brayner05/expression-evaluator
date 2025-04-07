@@ -4,7 +4,7 @@ PXPR is a fast mathematical expression parser written in Rust. I made this proje
 ## Examples
 ### Compute an expression via the CLI
 ```sh
-pxpr 3 - (2 + 5) + 2
+pxpr "3 - (2 + 5) + 2"
 ```
 Which outputs:
 ```sh
