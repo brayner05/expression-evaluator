@@ -4,7 +4,7 @@ mod expression;
 
 use core::fmt;
 use std::io::{self, Write};
-use expression::execute;
+use expression::{execute, Value};
 use lexer::Lexer;
 use parser::Parser;
 
@@ -47,7 +47,7 @@ fn report_error(error: &ApplicationError) {
 /// result of the computation and the error represents any error that happened during 
 /// computation of the expression.
 /// 
-fn compute_expression(raw_expression: &str) -> Result<f64, ApplicationError> {
+fn compute_expression(raw_expression: &str) -> Result<Value, ApplicationError> {
     let mut tokenizer = Lexer::new(raw_expression);
 
     // Convert the expression to a stream of tokens.
@@ -138,7 +138,14 @@ mod tests {
     fn computes_addition() {
         let source = "1.5 + 2.5";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 4.0);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 4.0);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 
 
@@ -146,7 +153,14 @@ mod tests {
     fn computes_subtraction() {
         let source = "9 - 4.5";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 4.5);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 4.5);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 
 
@@ -154,7 +168,14 @@ mod tests {
     fn computes_multiplication_by_zero() {
         let source = "72.592 * 0";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 0.0);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 0.0);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 
 
@@ -162,14 +183,28 @@ mod tests {
     fn computes_multiplication_by_one() {
         let source = "72.592 * 1";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 72.592);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 72.592);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 
     #[test]
     fn computes_multiplication() {
         let source = "6 * 2.5";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 15.0);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 15.0);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 
 
@@ -185,6 +220,56 @@ mod tests {
     fn computes_modulus() {
         let source = "15 % 10";
         let result = compute_expression(source).expect("Failed to compute expression");
-        assert_eq!(result, 5.0);
+        match result {
+            crate::expression::Value::Number(n) => {
+                assert_eq!(n, 5.0);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
+    }
+
+
+    #[test]
+    fn computes_and_true_false() {
+        let source = "true && false";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        match result {
+            crate::expression::Value::Boolean(b) => {
+                assert_eq!(b, false);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
+    }
+
+    #[test]
+    fn computes_and_true_true() {
+        let source = "true && true";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        match result {
+            crate::expression::Value::Boolean(b) => {
+                assert_eq!(b, true);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
+    }
+
+    #[test]
+    fn computes_and_false_false() {
+        let source = "false && false";
+        let result = compute_expression(source).expect("Failed to compute expression");
+        match result {
+            crate::expression::Value::Boolean(b) => {
+                assert_eq!(b, false);
+            },
+            _ => {
+                panic!("Expected a number");
+            }
+        }
     }
 }

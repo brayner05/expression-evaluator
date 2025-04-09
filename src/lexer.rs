@@ -8,13 +8,14 @@ pub enum Token {
 
     // Operations
     Plus, Minus, Asterisk, Slash, Caret,
-    Modulus,
+    Modulus, Not, And, Or, If,
+    Equal, NotEqual,
 
     // Parentheses
     LeftParen, RightParen,
 
     // Literals
-    Number(f64),
+    Number(f64), Boolean(bool)
 }
 
 
@@ -31,6 +32,13 @@ impl fmt::Display for Token {
             Token::LeftParen => write!(f, "LeftParen"),
             Token::RightParen => write!(f, "RightParen"),
             Token::Number(n) => write!(f, "Number({})", n),
+            Token::And => write!(f, "And"),
+            Token::Or => write!(f, "Or"),
+            Token::If => write!(f, "If"),
+            Token::Not => write!(f, "Not"),
+            Token::Equal => write!(f, "Equals"),
+            Token::NotEqual => write!(f, "NotEqual"),
+            Token::Boolean(n) => write!(f, "Boolean({})", n),
         }
     }
 }
@@ -101,6 +109,11 @@ impl<'a> Lexer<'a> {
     }
 
 
+    fn match_character(&self, ch: char) -> bool {
+        self.peek() == ch
+    }
+
+
     fn add_token(&mut self, token: Box<Token>) {
         self.token_list.push(token);
     }
@@ -139,14 +152,30 @@ impl<'a> Lexer<'a> {
     }
 
 
-    fn scan_next(&mut self) -> Result<(), LexerError> {
-        let next = self.advance();
-        if let Err(e) = next {
-            return Err(e);
+    fn scan_boolean(&mut self) -> Result<(), LexerError> {
+        while self.has_next() && self.peek().is_alphabetic() {
+            self.advance()?;
         }
 
-        let ch = next.unwrap();
-        match ch {
+        let lexeme = &self.source[self.token_start..self.current_position];
+
+        match lexeme {
+            "true" => {
+                self.add_token(Box::new(Token::Boolean(true)));
+                return Ok(());
+            },
+            "false" => {
+                self.add_token(Box::new(Token::Boolean(false)));
+                return Ok(());
+            }
+            _ => Err(LexerError::new(format!("Unrecognized token: {}", lexeme)))
+        }
+    }
+
+
+    fn scan_next(&mut self) -> Result<(), LexerError> {
+        let next = self.advance()?;
+        match next {
             ' ' => {}
             '+' => {
                 self.add_token(Box::new(Token::Plus));
@@ -172,14 +201,38 @@ impl<'a> Lexer<'a> {
             ')' => {
                 self.add_token(Box::new(Token::RightParen));
             }
+            '&' if self.match_character('&') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::And));
+            }
+            '|' if self.match_character('|') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::Or));
+            }
+            '!' if self.match_character('=') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::NotEqual));
+            }
+            '!' => {
+                self.add_token(Box::new(Token::Not));
+            }
+            '=' if self.match_character('=') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::Equal));
+            }
+            '=' if self.match_character('>') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::If));
+            }
+            't' | 'f' => {
+                self.scan_boolean()?;
+            }
             c if c.is_digit(10) => {
-                if let Err(e) = self.scan_number() {
-                    return Err(e);
-                }
+                self.scan_number()?
             }
             _ => {
                 return Err(LexerError::new(
-                    format!("Unrecognized token: '{}'", ch)))
+                    format!("Unrecognized token: '{}'", next)))
             }
         };
 
@@ -248,5 +301,74 @@ mod tests {
         assert!(if let super::Token::Number(1.0) = tokens[0].as_ref() { true } else { false });
         assert!(if let super::Token::Minus = tokens[1].as_ref() { true } else { false });
         assert!(if let super::Token::Number(2.0) = tokens[2].as_ref() { true } else { false });
+    }
+
+
+    #[test]
+    fn scan_booleans() {
+        let mut lexer = Lexer::new("true false");
+
+        let lexer_result = lexer.tokenize();
+        assert!(!lexer_result.is_err());
+
+        let tokens = lexer_result.unwrap();
+        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::Boolean(false) = tokens[1].as_ref() { true } else { false });
+    }
+
+
+    #[test]
+    fn scan_basic_and() {
+        let mut lexer = Lexer::new("true && false");
+
+        let lexer_result = lexer.tokenize();
+        assert!(!lexer_result.is_err());
+
+        let tokens = lexer_result.unwrap();
+        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::And = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
+    }
+
+
+    #[test]
+    fn scan_basic_or() {
+        let mut lexer = Lexer::new("true || false");
+
+        let lexer_result = lexer.tokenize();
+        assert!(!lexer_result.is_err());
+
+        let tokens = lexer_result.unwrap();
+        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::Or = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
+    }
+
+
+    #[test]
+    fn scan_basic_equality() {
+        let mut lexer = Lexer::new("true == false");
+
+        let lexer_result = lexer.tokenize();
+        assert!(!lexer_result.is_err());
+
+        let tokens = lexer_result.unwrap();
+        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::Equal = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
+    }
+
+
+    #[test]
+    fn scan_basic_not_equal() {
+        let mut lexer = Lexer::new("true != false");
+
+        let lexer_result = lexer.tokenize();
+        assert!(!lexer_result.is_err());
+
+        let tokens = lexer_result.unwrap();
+        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
+        assert!(if let super::Token::NotEqual = tokens[1].as_ref() { true } else { false });
+        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
     }
 }

@@ -4,34 +4,60 @@ use crate::parser::{AstNode, BinaryOperationType, UnaryOperationType};
 
 
 #[derive(Debug)]
-pub enum ComputationError {
-    DivideByZeroError(DivideByZeroError)
+pub struct ComputationError {
+    message: String
 }
 
 
 impl fmt::Display for ComputationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ComputationError::DivideByZeroError(divide_by_zero_error) => write!(f, "{}", divide_by_zero_error.message),
-        }
+        write!(f, "{}", self.message)
+    }
+}
+
+
+impl ComputationError {
+    fn new(message: String) -> Self {
+        ComputationError { message }
     }
 }
 
 
 #[derive(Debug)]
-pub struct DivideByZeroError {
-    message: String
+pub enum Value {
+    Number(f64),
+    Boolean(bool)
 }
 
 
-impl DivideByZeroError {
-    fn new(message: &str) -> Self {
-        DivideByZeroError { message: message.to_string() }
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Boolean(b) => write!(f, "{}", b),
+        }
     }
 }
 
 
-pub fn execute(expression: &Box<AstNode>) -> Result<f64, ComputationError> {
+impl Value {
+    fn as_number(&self) -> Option<f64> {
+        match self {
+            Value::Number(n) => Some(*n),
+            Value::Boolean(_) => None,
+        }
+    }
+
+    fn as_boolean(&self) -> Option<bool> {
+        match self {
+            Value::Number(_) => None,
+            Value::Boolean(b) => Some(*b),
+        }
+    }
+}
+
+
+pub fn execute(expression: &Box<AstNode>) -> Result<Value, ComputationError> {
     let root_node = expression;
     let current_node = root_node.as_ref();
 
@@ -47,37 +73,140 @@ pub fn execute(expression: &Box<AstNode>) -> Result<f64, ComputationError> {
             operand
         ) => compute_unary(operation_type, operand),
 
-        AstNode::Number(x) => Ok(*x),
+        AstNode::Number(x) => Ok(Value::Number(*x)),
+        AstNode::Boolean(x) => Ok(Value::Boolean(*x))
     }
 }
 
 
-fn compute_unary(operation_type: &UnaryOperationType, operand: &Box<AstNode>) -> Result<f64, ComputationError> {
+///
+/// Computes the result of a unary operation.
+/// 
+fn compute_unary(operation_type: &UnaryOperationType, operand: &Box<AstNode>) -> Result<Value, ComputationError> {
+    let operand_value = execute(operand)?;
     match operation_type {
-        UnaryOperationType::Negate => Ok(-1.0 * execute(operand)?),
+        UnaryOperationType::ArithmeticNegate => compute_arithmetic_negation(operand_value),
+        UnaryOperationType::LogicalNegate => compute_logical_not(operand_value),
     }
 }
 
 
-fn compute_binary(operation_type: &BinaryOperationType, left: &Box<AstNode>, right: &Box<AstNode>) -> Result<f64, ComputationError> {
+fn compute_binary(
+    operation_type: &BinaryOperationType,
+    left: &Box<AstNode>, 
+    right: &Box<AstNode>
+) -> Result<Value, ComputationError> {
     let left_side = execute(left)?;
     let right_side = execute(right)?;
 
     match operation_type {
-        BinaryOperationType::Add => Ok(left_side + right_side),
-        BinaryOperationType::Subtract => Ok(left_side - right_side),
-        BinaryOperationType::Multiply => Ok(left_side * right_side),
-        BinaryOperationType::Divide => {
-            if right_side == 0.0 {
-                return Err(ComputationError::DivideByZeroError(DivideByZeroError::new("Division by zero")))
-            }
-            Ok(left_side / right_side)
-        },
-        BinaryOperationType::Modulus => {
-            if right_side == 0.0 {
-                return Err(ComputationError::DivideByZeroError(DivideByZeroError::new("Division by zero")))
-            }
-            Ok(left_side % right_side)
-        },
+        BinaryOperationType::Add => compute_addition(&left_side, &right_side),
+        BinaryOperationType::Subtract => compute_subtraction(&left_side, &right_side),
+        BinaryOperationType::Multiply => compute_multiplication(&left_side, &right_side),
+        BinaryOperationType::Divide =>  compute_division(&left_side, &right_side),
+        BinaryOperationType::Modulus => compute_modulus(&left_side, &right_side),
+        BinaryOperationType::And => compute_conjunction(&left_side, &right_side),
+        BinaryOperationType::Or => compute_disjunction(&left_side, &right_side),
+        BinaryOperationType::If => compute_implication(&left_side, &right_side),
+        BinaryOperationType::Equal => todo!(),
+        BinaryOperationType::NotEqual => todo!(),
     }
 }
+
+
+///
+/// Computes negation of a number. Example: -2
+/// 
+fn compute_arithmetic_negation(operand: Value) -> Result<Value, ComputationError> {
+    match operand.as_number() {
+        Some(x) => Ok(Value::Number(-x)),
+        None => Err(ComputationError::new(format!("Invalid operand for '-': {}", operand))),
+    }
+}
+
+
+///
+/// Computes the logical negation of a boolean. Example: !false
+/// 
+fn compute_logical_not(operand: Value) -> Result<Value, ComputationError> {
+    match operand.as_boolean() {
+        Some(b) => Ok(Value::Boolean(!b)),
+        None => Err(ComputationError::new(format!("Invalid operand for '!': {}", operand))),
+    }
+}
+
+
+fn compute_addition(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_number(), right_side.as_number()) {
+        (Some(left), Some(right)) => Ok(Value::Number(left + right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '+': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '+': {}", left_side))),
+    }
+}
+
+
+fn compute_subtraction(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_number(), right_side.as_number()) {
+        (Some(left), Some(right)) => Ok(Value::Number(left - right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '-': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '-': {}", left_side))),
+    }
+}
+
+
+fn compute_multiplication(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_number(), right_side.as_number()) {
+        (Some(left), Some(right)) => Ok(Value::Number(left * right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '*': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '*': {}", left_side))),
+    }
+}
+
+
+fn compute_division(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_number(), right_side.as_number()) {
+        (Some(_), Some(0.0)) => Err(ComputationError::new(String::from("Division by 0"))),
+        (Some(left), Some(right)) => Ok(Value::Number(left / right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '/': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '/': {}", left_side))),
+    }
+}
+
+
+fn compute_modulus(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_number(), right_side.as_number()) {
+        (Some(_), Some(0.0)) => Err(ComputationError::new(String::from("Division by 0"))),
+        (Some(left), Some(right)) => Ok(Value::Number(left % right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '%': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '%': {}", left_side))),
+    }
+}
+
+
+fn compute_conjunction(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_boolean(), right_side.as_boolean()) {
+        (Some(left), Some(right)) => Ok(Value::Boolean(left && right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '&&': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '&&': {}", left_side))),
+    }
+}
+
+
+fn compute_disjunction(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_boolean(), right_side.as_boolean()) {
+        (Some(left), Some(right)) => Ok(Value::Boolean(left || right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '||': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '||': {}", left_side))),
+    }
+}
+
+
+fn compute_implication(left_side: &Value, right_side: &Value) -> Result<Value, ComputationError> {
+    match (left_side.as_boolean(), right_side.as_boolean()) {
+        (Some(left), Some(right)) => Ok(Value::Boolean(!left || right)),
+        (None, Some(_)) => Err(ComputationError::new(format!("Invalid left operand for '=>': {}", left_side))),
+        _ => Err(ComputationError::new(format!("Invalid right operand for '=>': {}", left_side))),
+    }
+}
+
+

@@ -7,19 +7,26 @@ pub enum BinaryOperationType {
     Subtract,
     Multiply,
     Divide,
-    Modulus
+    Modulus,
+    And,
+    Or,
+    If,
+    Equal,
+    NotEqual,
 }
 
 #[derive(Debug)]
 pub enum UnaryOperationType {
-    Negate
+    ArithmeticNegate,
+    LogicalNegate
 }
 
 #[derive(Debug)]
 pub enum AstNode {
     BinaryOperation(BinaryOperationType, Box<AstNode>, Box<AstNode>),
     UnaryOperation(UnaryOperationType, Box<AstNode>),
-    Number(f64)
+    Number(f64),
+    Boolean(bool)
 }
 
 
@@ -108,7 +115,7 @@ impl <'a> Parser<'a> {
     }
 
 
-    fn parse_negation(&mut self) -> Result<Box<AstNode>, ParserError> {
+    fn parse_negation(&mut self, operator: UnaryOperationType) -> Result<Box<AstNode>, ParserError> {
         let operand = self.parse_factor();
         if let None = self.peek() {
             return Err(ParserError::new(
@@ -116,7 +123,7 @@ impl <'a> Parser<'a> {
         }
         Ok(Box::new(
             AstNode::UnaryOperation(
-                UnaryOperationType::Negate, 
+                operator, 
                 operand.unwrap()
             )
         ))
@@ -135,7 +142,9 @@ impl <'a> Parser<'a> {
         match *next_token.unwrap() {
             Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
-            Token::Minus => self.parse_negation(),
+            Token::Boolean(b) => Ok(Box::new(AstNode::Boolean(b))),
+            Token::Minus => self.parse_negation(UnaryOperationType::ArithmeticNegate),
+            Token::Not => self.parse_negation(UnaryOperationType::LogicalNegate),
             _ => Err(ParserError::new(
                 String::from("Expected an factor.")))
         }
@@ -201,6 +210,24 @@ impl <'a> Parser<'a> {
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Subtract, left_hand, right_hand));
                 },
+                Token::And => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::And, left_hand, right_hand));
+                },
+                Token::Or => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::Or, left_hand, right_hand));
+                },
+                Token::If => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::If, left_hand, right_hand));
+                }
                 _ => {
                     break;
                 }
