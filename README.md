@@ -41,6 +41,10 @@ or it's equivalent:
 ```sh
 pxpr "false => true"
 ```
+both of which output:
+```
+    = true
+```
 
 
 ## Installation
