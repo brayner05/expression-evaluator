@@ -8,7 +8,7 @@ of a basic expression, PXPR can evaluate the expression directly from the comman
 - [How to use PXPR](#Examples)
 - [Installing PXPR](#Installation)
 
-## Examples ✍️
+## Examples
 ### Compute an expression via the CLI
 ```sh
 pxpr "3 - (2 + 5) + 2"
@@ -28,7 +28,7 @@ expr > 3 - (2 + 5) + 2
         = -2
 ```
 
-## Installation 📲
+## Installation
 To install PXPR, clone this repository:
 ```sh
 git clone https://github.com/brayner05/pxpr.git
