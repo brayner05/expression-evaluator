@@ -4,7 +4,7 @@ expressions with nested parentheses, as well as C-style boolean expressions such
 or via the PXPR REPL.
 
 ## Sections
-- [The goal of PXPR](#what-is-the-goal-of-pxpr]
+- [The goal of PXPR](#what-is-the-goal-of-pxpr)
 - [How to use PXPR](#how-to-use-pxpr)
 - [Installing PXPR](#Installation)
 
