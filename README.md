@@ -33,6 +33,16 @@ expr > 3 - (2 + 5) + 2
         = -2
 ```
 
+### Compute a boolean expression
+```sh
+pxpr "!false or true"
+```
+or it's equivalent:
+```sh
+pxpr "false => true"
+```
+
+
 ## Installation
 To install PXPR, clone this repository:
 ```sh
