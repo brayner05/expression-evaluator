@@ -35,7 +35,7 @@ expr > 3 - (2 + 5) + 2
 
 ### Compute a boolean expression
 ```sh
-pxpr "!false or true"
+pxpr "!false || true"
 ```
 or it's equivalent:
 ```sh
