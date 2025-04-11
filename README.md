@@ -5,7 +5,7 @@ or via the PXPR REPL. The goal of PXPR is to provide an easy-to-use, but feature
 of a basic expression, PXPR can evaluate the expression directly from the command line.
 
 ## Sections
-- [How to use PXPR]('#How to use PXPR')
+- [How to use PXPR](#how-to-use-pxpr)
 - [Installing PXPR](#Installation)
 
 ## How to use PXPR
