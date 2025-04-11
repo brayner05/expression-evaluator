@@ -34,11 +34,25 @@ To install PXPR, clone this repository:
 git clone https://github.com/brayner05/pxpr.git
 ```
 
-Next, switch to the repository directory and run the installation script:
+### Installing PXPR on
+- [Linux](###Linux)
+- [Windows](###Windows)
+
+### Linux
+Once the PXPR repository has been cloned, switch to the repository directory and run the installation script:
 ```sh
-cd expression-evaluator
+cd pxpr
 chmod +x ./install.sh
 ./install.sh
 ```
 
 If no errors occurred, then PXPR is now installed on your machine.
+
+
+### Windows
+Currently PXPR does not have an installation script for Windows, but can still be installed quite easily:
+```batch
+cd pxpr
+cargo build --release
+cargo install
+```
