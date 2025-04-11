@@ -86,7 +86,16 @@ fn compute_unary(operation_type: &UnaryOperationType, operand: &Box<AstNode>) ->
     let operand_value = execute(operand)?;
     match operation_type {
         UnaryOperationType::ArithmeticNegate => compute_arithmetic_negation(operand_value),
-        UnaryOperationType::LogicalNegate => compute_logical_not(operand_value),
+        UnaryOperationType::LogicalNot => compute_logical_not(operand_value),
+        UnaryOperationType::BitwiseNot => compute_bitwise_not(operand_value)
+    }
+}
+
+
+fn compute_bitwise_not(operand: Value) -> Result<Value, ComputationError> {
+    match operand.as_number() {
+        Some(x) => Ok(Value::Number(!(x.floor() as i64) as f64)),
+        None => Err(ComputationError::new(format!("Invalid operand for '~': {}", operand))),
     }
 }
 
@@ -110,6 +119,11 @@ fn compute_binary(
         BinaryOperationType::If => compute_implication(&left_side, &right_side),
         BinaryOperationType::Equal => todo!(),
         BinaryOperationType::NotEqual => todo!(),
+        BinaryOperationType::BitwiseAnd => todo!(),
+        BinaryOperationType::BitwiseOr => todo!(),
+        BinaryOperationType::BitwiseXor => todo!(),
+        BinaryOperationType::BitwiseLeftShift => todo!(),
+        BinaryOperationType::BitwiseRightShift => todo!(),
     }
 }
 

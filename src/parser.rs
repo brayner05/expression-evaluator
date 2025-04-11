@@ -13,12 +13,18 @@ pub enum BinaryOperationType {
     If,
     Equal,
     NotEqual,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
 }
 
 #[derive(Debug)]
 pub enum UnaryOperationType {
     ArithmeticNegate,
-    LogicalNegate
+    LogicalNot,
+    BitwiseNot
 }
 
 #[derive(Debug)]
@@ -115,7 +121,7 @@ impl <'a> Parser<'a> {
     }
 
 
-    fn parse_negation(&mut self, operator: UnaryOperationType) -> Result<Box<AstNode>, ParserError> {
+    fn parse_unary_operation(&mut self, operator: UnaryOperationType) -> Result<Box<AstNode>, ParserError> {
         let operand = self.parse_factor();
         if let None = self.peek() {
             return Err(ParserError::new(
@@ -143,8 +149,9 @@ impl <'a> Parser<'a> {
             Token::LeftParen => self.parse_parentheses(),
             Token::Number(n) => Ok(Box::new(AstNode::Number(n))),
             Token::Boolean(b) => Ok(Box::new(AstNode::Boolean(b))),
-            Token::Minus => self.parse_negation(UnaryOperationType::ArithmeticNegate),
-            Token::Not => self.parse_negation(UnaryOperationType::LogicalNegate),
+            Token::Minus => self.parse_unary_operation(UnaryOperationType::ArithmeticNegate),
+            Token::Not => self.parse_unary_operation(UnaryOperationType::LogicalNot),
+            Token::BitwiseNot => self.parse_unary_operation(UnaryOperationType::BitwiseNot),
             _ => Err(ParserError::new(
                 String::from("Expected an factor.")))
         }
@@ -192,6 +199,8 @@ impl <'a> Parser<'a> {
     /// # Returns
     /// A `Result<Box<AstNode>, ParserError>` in which, on success,
     /// holds an abstract syntax tree representing the factor.
+    ///
+    /// TODO: Refactor the match conditions into a separate function.
     /// 
     fn parse_expression(&mut self) -> Result<Box<AstNode>, ParserError> {
         let mut left_hand = self.parse_term()?;
@@ -227,6 +236,41 @@ impl <'a> Parser<'a> {
                     let right_hand = self.parse_term()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::If, left_hand, right_hand));
+                }
+                Token::BitwiseAnd => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::BitwiseAnd, left_hand, right_hand)
+                    )
+                }
+                Token::BitwiseOr => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::BitwiseOr, left_hand, right_hand)
+                    )
+                }
+                Token::BitwiseXor => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::BitwiseXor, left_hand, right_hand)
+                    )
+                }
+                Token::BitwiseLeftShift => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::BitwiseLeftShift, left_hand, right_hand)
+                    )
+                }
+                Token::BitwiseRightShift => {
+                    self.advance().unwrap();
+                    let right_hand = self.parse_term()?;
+                    left_hand = Box::new(
+                        AstNode::BinaryOperation(BinaryOperationType::BitwiseRightShift, left_hand, right_hand)
+                    )
                 }
                 _ => {
                     break;

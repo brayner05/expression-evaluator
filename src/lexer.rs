@@ -7,9 +7,11 @@ pub enum Token {
     EOF,
 
     // Operations
-    Plus, Minus, Asterisk, Slash, Caret,
+    Plus, Minus, Asterisk, Slash,
     Modulus, Not, And, Or, If,
     Equal, NotEqual,
+    BitwiseNot, BitwiseAnd, BitwiseOr,
+    BitwiseXor, BitwiseLeftShift, BitwiseRightShift,
 
     // Parentheses
     LeftParen, RightParen,
@@ -27,7 +29,6 @@ impl fmt::Display for Token {
             Token::Minus => write!(f, "Minus"),
             Token::Asterisk => write!(f, "Asterisk"),
             Token::Slash => write!(f, "Slash"),
-            Token::Caret => write!(f, "Caret"),
             Token::Modulus => write!(f, "Modulus"),
             Token::LeftParen => write!(f, "LeftParen"),
             Token::RightParen => write!(f, "RightParen"),
@@ -39,6 +40,12 @@ impl fmt::Display for Token {
             Token::Equal => write!(f, "Equals"),
             Token::NotEqual => write!(f, "NotEqual"),
             Token::Boolean(n) => write!(f, "Boolean({})", n),
+            Token::BitwiseNot => write!(f, "BitwiseNot"),
+            Token::BitwiseAnd => write!(f, "BitwiseAnd"),
+            Token::BitwiseOr => write!(f, "BitwiseOr"),
+            Token::BitwiseXor => write!(f, "BitwiseXor"),
+            Token::BitwiseLeftShift => write!(f, "BitwiseLeftShift"),
+            Token::BitwiseRightShift => write!(f, "BitwiseRightShift"),
         }
     }
 }
@@ -81,6 +88,12 @@ impl<'a> Lexer<'a> {
     }
 
 
+    ///
+    /// Consume the next character in the input string and return it.
+    /// 
+    /// # Returns
+    /// The next character in the input string.
+    /// 
     fn advance(&mut self) -> Result<char, LexerError> {
         let next_char = self.source
             .chars()
@@ -97,6 +110,13 @@ impl<'a> Lexer<'a> {
     }
 
 
+    ///
+    /// Get the next character in the input string but does not
+    /// consume it.
+    /// 
+    /// # Returns
+    /// The next character in the input string.
+    /// 
     fn peek(&self) -> char {
         if !self.has_next() {
             return '\0'
@@ -119,6 +139,9 @@ impl<'a> Lexer<'a> {
     }
 
 
+    ///
+    /// Scans a number literal.
+    /// 
     fn scan_number(&mut self) -> Result<(), LexerError> {
         while self.has_next() && self.peek().is_digit(10) {
             if let Err(e) = self.advance() {
@@ -152,6 +175,9 @@ impl<'a> Lexer<'a> {
     }
 
 
+    ///
+    /// Scans a boolean literal from the input string.
+    ///  
     fn scan_boolean(&mut self) -> Result<(), LexerError> {
         while self.has_next() && self.peek().is_alphabetic() {
             self.advance()?;
@@ -177,6 +203,11 @@ impl<'a> Lexer<'a> {
         let next = self.advance()?;
         match next {
             ' ' => {}
+            
+            // ======================== //
+            // = Arithmetic Operators = //
+            // ======================== //
+
             '+' => {
                 self.add_token(Box::new(Token::Plus));
             }
@@ -189,9 +220,6 @@ impl<'a> Lexer<'a> {
             '*' => {
                 self.add_token(Box::new(Token::Asterisk));
             }
-            '^' => {
-                self.add_token(Box::new(Token::Caret));
-            }
             '%' => {
                 self.add_token(Box::new(Token::Modulus));
             }
@@ -201,6 +229,11 @@ impl<'a> Lexer<'a> {
             ')' => {
                 self.add_token(Box::new(Token::RightParen));
             }
+
+            // ======================== //
+            // = Boolean Operators    = //
+            // ======================== //
+
             '&' if self.match_character('&') => {
                 self.advance()?;
                 self.add_token(Box::new(Token::And));
@@ -227,9 +260,45 @@ impl<'a> Lexer<'a> {
             't' | 'f' => {
                 self.scan_boolean()?;
             }
+
+            // ======================== //
+            // = Bitwise Operators    = //
+            // ======================== //
+
+            '~' => {
+                self.add_token(Box::new(Token::BitwiseNot));
+            }
+            '&' => {
+                self.add_token(Box::new(Token::BitwiseAnd));
+            }
+            '|' => {
+                self.add_token(Box::new(Token::BitwiseOr));
+            }
+            '^' => {
+                self.add_token(Box::new(Token::BitwiseXor));
+            }
+            '>' if self.match_character('>') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::BitwiseRightShift));
+            }
+            '<' if self.match_character('<') => {
+                self.advance()?;
+                self.add_token(Box::new(Token::BitwiseLeftShift));
+            }
+
+            // ======================== //
+            // = Number Literals      = //
+            // ======================== //
+
             c if c.is_digit(10) => {
                 self.scan_number()?
             }
+
+
+            // ========================== //
+            // = Unrecognized character = //
+            // ========================== //
+
             _ => {
                 return Err(LexerError::new(
                     format!("Unrecognized token: '{}'", next)))
