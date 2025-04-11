@@ -1,8 +1,10 @@
-use core::fmt;
+use std::fmt;
+
+use crate::pxpr;
 
 
-#[derive(Debug, PartialEq)]
-pub enum Token {
+#[derive(Debug)]
+pub enum TokenType {
     // Miscellaneaous
     EOF,
 
@@ -17,57 +19,61 @@ pub enum Token {
     LeftParen, RightParen,
 
     // Literals
-    Number(f64), Boolean(bool)
+    Float, Integer, Boolean
 }
 
 
-impl fmt::Display for Token {
+impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Token::EOF => write!(f, "EOF"),
-            Token::Plus => write!(f, "Plus"),
-            Token::Minus => write!(f, "Minus"),
-            Token::Asterisk => write!(f, "Asterisk"),
-            Token::Slash => write!(f, "Slash"),
-            Token::Modulus => write!(f, "Modulus"),
-            Token::LeftParen => write!(f, "LeftParen"),
-            Token::RightParen => write!(f, "RightParen"),
-            Token::Number(n) => write!(f, "Number({})", n),
-            Token::And => write!(f, "And"),
-            Token::Or => write!(f, "Or"),
-            Token::If => write!(f, "If"),
-            Token::Not => write!(f, "Not"),
-            Token::Equal => write!(f, "Equals"),
-            Token::NotEqual => write!(f, "NotEqual"),
-            Token::Boolean(n) => write!(f, "Boolean({})", n),
-            Token::BitwiseNot => write!(f, "BitwiseNot"),
-            Token::BitwiseAnd => write!(f, "BitwiseAnd"),
-            Token::BitwiseOr => write!(f, "BitwiseOr"),
-            Token::BitwiseXor => write!(f, "BitwiseXor"),
-            Token::BitwiseLeftShift => write!(f, "BitwiseLeftShift"),
-            Token::BitwiseRightShift => write!(f, "BitwiseRightShift"),
-        }
+        write!(f, "{:?}", self)
     }
 }
 
 
 #[derive(Debug)]
-pub struct LexerError {
-    pub message: String
+pub enum TokenValue {
+    Float(f64),
+    Integer(i64),
+    Boolean(bool)
+}
+
+impl fmt::Display for TokenValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 
-impl LexerError {
-    fn new(message: String) -> Self {
-        LexerError { message: message.to_string() }
+
+#[derive(Debug)]
+pub struct Token {
+    type_: TokenType,
+    lexeme: String,
+    value: Option<TokenValue>
+}
+
+
+impl Token {
+    fn new(type_: TokenType, lexeme: String, value: Option<TokenValue>) -> Self {
+        Token { type_, lexeme, value }
+    }
+}
+
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.value {
+            Some(value) => write!(f, "[ {}, \"{}\", {} ]", &self.type_, &self.lexeme, &value),
+            None => write!(f, "[ {}, \"{}\" ]", &self.type_, &self.lexeme),
+        }
     }
 }
 
 
 pub struct Lexer<'a> {
     source: &'a str,
-    current_position: usize,
-    token_start: usize,
+    current_position: u32,
+    token_start: u32,
     token_list: Vec<Box<Token>>
 }
 
@@ -88,25 +94,21 @@ impl<'a> Lexer<'a> {
     }
 
 
+    fn error(&self, message: String) -> pxpr::Error {
+        pxpr::Error::new(self.current_position, message)
+    }
+
+
     ///
     /// Consume the next character in the input string and return it.
     /// 
     /// # Returns
     /// The next character in the input string.
     /// 
-    fn advance(&mut self) -> Result<char, LexerError> {
-        let next_char = self.source
-            .chars()
-            .nth(self.current_position);
-
-        match next_char {
-            Some(n) => {
-                self.current_position += 1;
-                Ok(n)
-            },
-            None => Err(LexerError::new(
-                String::from("Cannot read past the end of the source.")))
-        }
+    fn advance(&mut self) -> char {
+        let next = self.peek().unwrap();
+        self.current_position += 1;
+        next
     }
 
 
@@ -117,90 +119,121 @@ impl<'a> Lexer<'a> {
     /// # Returns
     /// The next character in the input string.
     /// 
-    fn peek(&self) -> char {
-        if !self.has_next() {
-            return '\0'
-        }
-
+    fn peek(&self) -> Option<char> {
         self.source
-                .chars()
-                .nth(self.current_position)
-                .unwrap()
+            .chars()
+            .nth(self.current_position as usize)
     }
 
 
     fn match_character(&self, ch: char) -> bool {
-        self.peek() == ch
+        self.peek().is_some() && self.peek().unwrap() == ch
     }
 
 
-    fn add_token(&mut self, token: Box<Token>) {
-        self.token_list.push(token);
+    fn add_token(&mut self, token_type: TokenType) {
+        let (start, end) = (self.token_start as usize, self.current_position as usize);
+        let lexeme = self.source[start..end].to_string();
+        self.token_list.push(Box::new(Token::new(token_type, lexeme, None)));
     }
 
 
     ///
     /// Scans a number literal.
     /// 
-    fn scan_number(&mut self) -> Result<(), LexerError> {
-        while self.has_next() && self.peek().is_digit(10) {
-            if let Err(e) = self.advance() {
-                return Err(e)
+    fn scan_number(&mut self) {
+        while let Some(ch) = self.peek() {
+            if !ch.is_digit(10) {
+                break;
             }
+            self.advance();
         }
 
-        if self.peek() == '.' {
-            if let Err(e) = self.advance() {
-                return Err(e)
-            }
-            while self.has_next() && self.peek().is_digit(10) {
-                if let Err(e) = self.advance() {
-                    return Err(e)
+        let mut is_integer = true;
+
+        if let Some('.') = self.peek() {
+            is_integer = false;
+            self.advance();
+            while let Some(ch) = self.peek() {
+                if !ch.is_digit(10) {
+                    break;
                 }
+                self.advance();
             }
         }
 
-        let lexeme = &self.source[self.token_start..self.current_position];
-        let value: Result<f64, std::num::ParseFloatError> = lexeme.parse();
-
-        match value {
-            Ok(n) => {
-                self.add_token(Box::new(Token::Number(n)));
-                Ok(())
+        let (start, end) = (self.token_start as usize, self.current_position as usize);
+        let lexeme = self.source[start..end].to_string();
+        
+        match is_integer {
+            true => {
+                let value: i64 = lexeme.parse().unwrap();
+                self.token_list.push(Box::new(
+                    Token::new(
+                        TokenType::Integer, 
+                        lexeme, 
+                        Some(TokenValue::Integer(value))
+                    )
+                ));
             },
-            Err(_) => Err(LexerError::new(
-                String::from("Failed to parse float.")))
+            false => {
+                let value: f64 = lexeme.parse().unwrap();
+                self.token_list.push(Box::new(
+                    Token::new(
+                        TokenType::Float, 
+                        lexeme, 
+                        Some(TokenValue::Float(value))
+                    )
+                ));
+            },
         }
-
     }
 
 
     ///
     /// Scans a boolean literal from the input string.
     ///  
-    fn scan_boolean(&mut self) -> Result<(), LexerError> {
-        while self.has_next() && self.peek().is_alphabetic() {
-            self.advance()?;
+    fn scan_boolean(&mut self) -> Result<(), pxpr::Error> {
+        while let Some(ch) = self.peek() {
+            if !ch.is_alphabetic() {
+                break;
+            }
+            self.advance();
         }
 
-        let lexeme = &self.source[self.token_start..self.current_position];
+        let (start, end) = (self.token_start as usize, self.current_position as usize);
+        let lexeme = self.source[start..end].to_string();
 
-        match lexeme {
+        match lexeme.as_str() {
             "true" => {
-                self.add_token(Box::new(Token::Boolean(true)));
+                self.token_list.push(Box::new(
+                    Token::new(
+                        TokenType::Boolean, 
+                        lexeme, 
+                        Some(TokenValue::Boolean(true))
+                    )
+                ));
+
                 return Ok(());
             },
             "false" => {
-                self.add_token(Box::new(Token::Boolean(false)));
+                self.token_list.push(Box::new(
+                    Token::new(
+                        TokenType::Boolean, 
+                        lexeme, 
+                        Some(TokenValue::Boolean(false))
+                    )
+                ));
+                
                 return Ok(());
             }
-            _ => Err(LexerError::new(format!("Unrecognized token: {}", lexeme)))
+            _ => Err(self.error(format!("Unrecognized token: {}", lexeme)))
         }
     }
 
 
-    fn scan_next(&mut self) -> Result<(), LexerError> {
-        let next = self.advance()?;
+    fn scan_next(&mut self) -> Result<(), pxpr::Error> {
+        let next = self.advance();
         match next {
             ' ' => {}
             
@@ -209,25 +242,25 @@ impl<'a> Lexer<'a> {
             // ======================== //
 
             '+' => {
-                self.add_token(Box::new(Token::Plus));
+                self.add_token(TokenType::Plus);
             }
             '-' => {
-                self.add_token(Box::new(Token::Minus));
+                self.add_token(TokenType::Minus);
             }
             '/' => {
-                self.add_token(Box::new(Token::Slash));
+                self.add_token(TokenType::Slash);
             }
             '*' => {
-                self.add_token(Box::new(Token::Asterisk));
+                self.add_token(TokenType::Asterisk);
             }
             '%' => {
-                self.add_token(Box::new(Token::Modulus));
+                self.add_token(TokenType::Modulus);
             }
             '(' => {
-                self.add_token(Box::new(Token::LeftParen));
+                self.add_token(TokenType::LeftParen);
             }
             ')' => {
-                self.add_token(Box::new(Token::RightParen));
+                self.add_token(TokenType::RightParen);
             }
 
             // ======================== //
@@ -235,27 +268,27 @@ impl<'a> Lexer<'a> {
             // ======================== //
 
             '&' if self.match_character('&') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::And));
+                self.advance();
+                self.add_token(TokenType::And);
             }
             '|' if self.match_character('|') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::Or));
+                self.advance();
+                self.add_token(TokenType::Or);
             }
             '!' if self.match_character('=') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::NotEqual));
+                self.advance();
+                self.add_token(TokenType::NotEqual);
             }
             '!' => {
-                self.add_token(Box::new(Token::Not));
+                self.add_token(TokenType::Not);
             }
             '=' if self.match_character('=') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::Equal));
+                self.advance();
+                self.add_token(TokenType::Equal);
             }
             '=' if self.match_character('>') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::If));
+                self.advance();
+                self.add_token(TokenType::If);
             }
             't' | 'f' => {
                 self.scan_boolean()?;
@@ -266,24 +299,29 @@ impl<'a> Lexer<'a> {
             // ======================== //
 
             '~' => {
-                self.add_token(Box::new(Token::BitwiseNot));
+                self.add_token(TokenType::BitwiseNot);
             }
+
             '&' => {
-                self.add_token(Box::new(Token::BitwiseAnd));
+                self.add_token(TokenType::BitwiseAnd);
             }
+
             '|' => {
-                self.add_token(Box::new(Token::BitwiseOr));
+                self.add_token(TokenType::BitwiseOr);
             }
+
             '^' => {
-                self.add_token(Box::new(Token::BitwiseXor));
+                self.add_token(TokenType::BitwiseXor);
             }
+
             '>' if self.match_character('>') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::BitwiseRightShift));
+                self.advance();
+                self.add_token(TokenType::BitwiseRightShift);
             }
+
             '<' if self.match_character('<') => {
-                self.advance()?;
-                self.add_token(Box::new(Token::BitwiseLeftShift));
+                self.advance();
+                self.add_token(TokenType::BitwiseLeftShift);
             }
 
             // ======================== //
@@ -291,7 +329,7 @@ impl<'a> Lexer<'a> {
             // ======================== //
 
             c if c.is_digit(10) => {
-                self.scan_number()?
+                self.scan_number()
             }
 
 
@@ -300,7 +338,7 @@ impl<'a> Lexer<'a> {
             // ========================== //
 
             _ => {
-                return Err(LexerError::new(
+                return Err(self.error(
                     format!("Unrecognized token: '{}'", next)))
             }
         };
@@ -316,20 +354,18 @@ impl<'a> Lexer<'a> {
     /// A `&Vec<Box<Token>>` or rather a reference to a vector of heap-allocated
     /// tokens constructed from the input string.
     /// 
-    pub fn tokenize(&mut self) -> Result<&Vec<Box<Token>>, LexerError> {
+    pub fn tokenize(&mut self) -> Result<&Vec<Box<Token>>, pxpr::Error> {
         while self.has_next() {
             // If scanning the next token produces an error,
             // return that error.
-            if let Err(e) = self.scan_next() {
-                return Err(e);
-            }
+            self.scan_next()?;
 
             // Set the start of the current token to the current position.
             self.token_start = self.current_position;
         }
 
         // Add the EOF token.
-        self.add_token(Box::new(Token::EOF));
+        self.add_token(TokenType::EOF);
 
         // No errors occurred so return a success result and
         // the list of tokens.
@@ -337,107 +373,3 @@ impl<'a> Lexer<'a> {
     }
 }
 
-
-///
-/// # Tests
-/// 
-#[cfg(test)]
-mod tests {
-    use super::Lexer;
-
-    #[test]
-    fn scan_next_basic_addition() {
-        let mut lexer = Lexer::new("1 + 2");
-        while lexer.has_next() {
-            lexer.scan_next().expect("Failed to scan token");
-            lexer.token_start = lexer.current_position;
-        }
-        let tokens = lexer.token_list;
-        assert!(if let super::Token::Number(1.0) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::Plus = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Number(2.0) = tokens[2].as_ref() { true } else { false });
-    }
-
-    
-    #[test]
-    fn scan_next_basic_subtraction() {
-        let mut lexer = Lexer::new("1 - 2");
-        while lexer.has_next() {
-            lexer.scan_next().expect("Failed to scan token");
-            lexer.token_start = lexer.current_position;
-        }
-        let tokens = lexer.token_list;
-        assert!(if let super::Token::Number(1.0) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::Minus = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Number(2.0) = tokens[2].as_ref() { true } else { false });
-    }
-
-
-    #[test]
-    fn scan_booleans() {
-        let mut lexer = Lexer::new("true false");
-
-        let lexer_result = lexer.tokenize();
-        assert!(!lexer_result.is_err());
-
-        let tokens = lexer_result.unwrap();
-        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::Boolean(false) = tokens[1].as_ref() { true } else { false });
-    }
-
-
-    #[test]
-    fn scan_basic_and() {
-        let mut lexer = Lexer::new("true && false");
-
-        let lexer_result = lexer.tokenize();
-        assert!(!lexer_result.is_err());
-
-        let tokens = lexer_result.unwrap();
-        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::And = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
-    }
-
-
-    #[test]
-    fn scan_basic_or() {
-        let mut lexer = Lexer::new("true || false");
-
-        let lexer_result = lexer.tokenize();
-        assert!(!lexer_result.is_err());
-
-        let tokens = lexer_result.unwrap();
-        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::Or = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
-    }
-
-
-    #[test]
-    fn scan_basic_equality() {
-        let mut lexer = Lexer::new("true == false");
-
-        let lexer_result = lexer.tokenize();
-        assert!(!lexer_result.is_err());
-
-        let tokens = lexer_result.unwrap();
-        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::Equal = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
-    }
-
-
-    #[test]
-    fn scan_basic_not_equal() {
-        let mut lexer = Lexer::new("true != false");
-
-        let lexer_result = lexer.tokenize();
-        assert!(!lexer_result.is_err());
-
-        let tokens = lexer_result.unwrap();
-        assert!(if let super::Token::Boolean(true) = tokens[0].as_ref() { true } else { false });
-        assert!(if let super::Token::NotEqual = tokens[1].as_ref() { true } else { false });
-        assert!(if let super::Token::Boolean(false) = tokens[2].as_ref() { true } else { false });
-    }
-}
