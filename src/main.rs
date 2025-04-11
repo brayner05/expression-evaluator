@@ -39,28 +39,21 @@ pub mod pxpr {
 /// result of the computation and the error represents any error that happened during 
 /// computation of the expression.
 /// 
-fn compute_expression(raw_expression: &str) {
+fn compute_expression(raw_expression: &str) -> Result<Value, pxpr::Error> {
     let mut tokenizer = Lexer::new(raw_expression);
 
     // Convert the expression to a stream of tokens.
-    let tokens = tokenizer.tokenize();
-    if let Err(e) = tokens {
-        pxpr::report_error(e);
-    }
+    let tokens = tokenizer.tokenize()?;
 
-    let mut parser = Parser::new(tokens.unwrap());
+    let mut parser = Parser::new(tokens);
 
     // Convert the token stream to an abstract syntax tree.
-    let ast = parser.parse();
-    if let Err(e) = ast {
-        pxpr::report_error(e);
-    }
+    let ast = parser.parse()?;
 
     // Walk through the AST and compute the result.
-    let result_value = execute(&ast.unwrap());
-    if let Err(e) = result_value {
-        pxpr::report_error(e);
-    }
+    let result_value = execute(&ast)?;
+
+    Ok(result_value)
 }
 
 

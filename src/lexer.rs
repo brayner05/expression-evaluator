@@ -37,6 +37,30 @@ pub enum TokenValue {
     Boolean(bool)
 }
 
+
+impl TokenValue {
+    pub fn as_float(&self) -> Option<f64> {
+        match self {
+            TokenValue::Float(f) => Some(*f),
+            _ => None
+        }
+    }
+
+    pub fn as_integer(&self) -> Option<i64> {
+        match self {
+            TokenValue::Integer(i) => Some(*i),
+            _ => None
+        }
+    }
+
+    pub fn as_boolean(&self) -> Option<bool> {
+        match self {
+            TokenValue::Boolean(b) => Some(*b),
+            _ => None
+        }
+    }
+}
+
 impl fmt::Display for TokenValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -47,15 +71,16 @@ impl fmt::Display for TokenValue {
 
 #[derive(Debug)]
 pub struct Token {
-    type_: TokenType,
-    lexeme: String,
-    value: Option<TokenValue>
+    pub type_: TokenType,
+    pub lexeme: String,
+    pub value: Option<TokenValue>,
+    pub column: u32
 }
 
 
 impl Token {
-    fn new(type_: TokenType, lexeme: String, value: Option<TokenValue>) -> Self {
-        Token { type_, lexeme, value }
+    fn new(type_: TokenType, lexeme: String, value: Option<TokenValue>, column: u32) -> Self {
+        Token { type_, lexeme, value, column }
     }
 }
 
@@ -134,7 +159,7 @@ impl<'a> Lexer<'a> {
     fn add_token(&mut self, token_type: TokenType) {
         let (start, end) = (self.token_start as usize, self.current_position as usize);
         let lexeme = self.source[start..end].to_string();
-        self.token_list.push(Box::new(Token::new(token_type, lexeme, None)));
+        self.token_list.push(Box::new(Token::new(token_type, lexeme, None, self.current_position)));
     }
 
 
@@ -172,7 +197,8 @@ impl<'a> Lexer<'a> {
                     Token::new(
                         TokenType::Integer, 
                         lexeme, 
-                        Some(TokenValue::Integer(value))
+                        Some(TokenValue::Integer(value)),
+                        self.current_position
                     )
                 ));
             },
@@ -182,7 +208,8 @@ impl<'a> Lexer<'a> {
                     Token::new(
                         TokenType::Float, 
                         lexeme, 
-                        Some(TokenValue::Float(value))
+                        Some(TokenValue::Float(value)),
+                        self.current_position
                     )
                 ));
             },
@@ -210,23 +237,27 @@ impl<'a> Lexer<'a> {
                     Token::new(
                         TokenType::Boolean, 
                         lexeme, 
-                        Some(TokenValue::Boolean(true))
+                        Some(TokenValue::Boolean(true)),
+                        self.current_position
                     )
                 ));
 
                 return Ok(());
             },
+
             "false" => {
                 self.token_list.push(Box::new(
                     Token::new(
                         TokenType::Boolean, 
                         lexeme, 
-                        Some(TokenValue::Boolean(false))
+                        Some(TokenValue::Boolean(false)),
+                        self.current_position
                     )
                 ));
                 
                 return Ok(());
             }
+
             _ => Err(self.error(format!("Unrecognized token: {}", lexeme)))
         }
     }

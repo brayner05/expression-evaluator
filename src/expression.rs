@@ -25,7 +25,8 @@ impl ComputationError {
 
 #[derive(Debug)]
 pub enum Value {
-    Number(f64),
+    Float(f64),
+    Integer(i64),
     Boolean(bool)
 }
 
@@ -33,7 +34,8 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Number(n) => write!(f, "{}", n),
+            Value::Integer(n) => write!(f, "{}", n),
+            Value::Float(n) => write!(f, "{}", n),
             Value::Boolean(b) => write!(f, "{}", b),
         }
     }
@@ -41,17 +43,24 @@ impl fmt::Display for Value {
 
 
 impl Value {
-    fn as_number(&self) -> Option<f64> {
+    fn as_integer(&self) -> Option<i64> {
         match self {
-            Value::Number(n) => Some(*n),
-            Value::Boolean(_) => None,
+            Value::Integer(n) => Some(*n),
+            _ => None,
+        }
+    }
+
+    fn as_float(&self) -> Option<f64> {
+        match self {
+            Value::Float(n) => Some(*n),
+            _ => None,
         }
     }
 
     fn as_boolean(&self) -> Option<bool> {
         match self {
-            Value::Number(_) => None,
             Value::Boolean(b) => Some(*b),
+            _ => None,
         }
     }
 }
@@ -63,18 +72,18 @@ pub fn execute(expression: &Box<AstNode>) -> Result<Value, ComputationError> {
 
     match current_node {
         AstNode::BinaryOperation(
-            operation_type, 
-            left, 
-            right
-        ) => compute_binary(operation_type, left, right),
-
+                        operation_type, 
+                        left, 
+                        right
+            ) => compute_binary(operation_type, left, right),
         AstNode::UnaryOperation(
-            operation_type, 
-            operand
-        ) => compute_unary(operation_type, operand),
+                operation_type, 
+                operand
+            ) => compute_unary(operation_type, operand),
 
-        AstNode::Number(x) => Ok(Value::Number(*x)),
-        AstNode::Boolean(x) => Ok(Value::Boolean(*x))
+        AstNode::Integer(x) => Ok(Value::Integer(*x)),
+        AstNode::Boolean(x) => Ok(Value::Boolean(*x)),
+        AstNode::Float(x) => Ok(Value::Float(*x)),
     }
 }
 
@@ -93,8 +102,8 @@ fn compute_unary(operation_type: &UnaryOperationType, operand: &Box<AstNode>) ->
 
 
 fn compute_bitwise_not(operand: Value) -> Result<Value, ComputationError> {
-    match operand.as_number() {
-        Some(x) => Ok(Value::Number(!(x.floor() as i64) as f64)),
+    match operand.as_integer() {
+        Some(x) => Ok(Value::Integer(!x)),
         None => Err(ComputationError::new(format!("Invalid operand for '~': {}", operand))),
     }
 }
