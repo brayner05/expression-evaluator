@@ -9,7 +9,7 @@ or via the PXPR REPL.
 - [Installing PXPR](#Installation)
 
 ## What is the goal of PXPR?
-The goal of PXPR is to provide an easy-to-use, but feature rich command line calculator. Rather than opening up an IDE or text-editor, writing some code, compiling that code, and running it all to get the value 
+The goal of PXPR is to provide an easy-to-use, but feature rich command line calculator. Rather than opening up a calculator application and manually clicking buttons or starting up an IDE or text-editor, writing some code, compiling that code, and running it all to get the value 
 of a basic expression, PXPR can evaluate the expression directly from the command line.
 
 
