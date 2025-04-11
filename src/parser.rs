@@ -1,25 +1,15 @@
 use std::rc::Rc;
 
-use crate::{lexer::{Token, TokenType, TokenValue}, pxpr};
+use crate::{lexer::{Token, TokenType}, pxpr};
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum BinaryOperationType {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulus,
-    And,
-    Or,
-    If,
-    Equal,
-    NotEqual,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
-    BitwiseLeftShift,
-    BitwiseRightShift,
+    Add, Subtract, Multiply, Divide, Modulus,
+
+    And, Or, If, Equal, NotEqual,
+    
+    BitwiseAnd, BitwiseOr, BitwiseXor, BitwiseLeftShift, BitwiseRightShift,
 }
 
 #[derive(Debug)]
@@ -136,13 +126,17 @@ impl <'a> Parser<'a> {
         let tok = next_token.unwrap();
 
         match tok.type_ {
-            TokenType::LeftParen => self.parse_parentheses(),
+            TokenType::LeftParen 
+                => self.parse_parentheses(),
 
-            TokenType::Minus => self.parse_unary_operation(UnaryOperationType::ArithmeticNegate),
+            TokenType::Minus
+                => self.parse_unary_operation(UnaryOperationType::ArithmeticNegate),
 
-            TokenType::Not => self.parse_unary_operation(UnaryOperationType::LogicalNot),
+            TokenType::Not 
+                => self.parse_unary_operation(UnaryOperationType::LogicalNot),
 
-            TokenType::BitwiseNot => self.parse_unary_operation(UnaryOperationType::BitwiseNot),
+            TokenType::BitwiseNot 
+                => self.parse_unary_operation(UnaryOperationType::BitwiseNot),
 
             TokenType::Boolean => {
                 if tok.value.is_none() {
@@ -220,17 +214,20 @@ impl <'a> Parser<'a> {
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Multiply, left_hand, right_hand));
                 },
+
                 TokenType::Slash => {
                     self.advance().unwrap();
                     let right_hand = self.parse_factor()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Divide, left_hand, right_hand));
                 },
+
                 TokenType::Modulus => {
                     self.advance().unwrap();
                     let right_hand = self.parse_factor()?;
                     left_hand = Box::new(AstNode::BinaryOperation(BinaryOperationType::Modulus, left_hand, right_hand));
                 },
+
                 _ => {
                     break;
                 }
@@ -261,30 +258,35 @@ impl <'a> Parser<'a> {
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Add, left_hand, right_hand));
                 },
+
                 TokenType::Minus => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Subtract, left_hand, right_hand));
                 },
+
                 TokenType::And => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::And, left_hand, right_hand));
                 },
+
                 TokenType::Or => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::Or, left_hand, right_hand));
                 },
+
                 TokenType::If => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
                     left_hand = Box::new(
                         AstNode::BinaryOperation(BinaryOperationType::If, left_hand, right_hand));
                 }
+
                 TokenType::BitwiseAnd => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
@@ -292,6 +294,7 @@ impl <'a> Parser<'a> {
                         AstNode::BinaryOperation(BinaryOperationType::BitwiseAnd, left_hand, right_hand)
                     )
                 }
+
                 TokenType::BitwiseOr => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
@@ -299,6 +302,7 @@ impl <'a> Parser<'a> {
                         AstNode::BinaryOperation(BinaryOperationType::BitwiseOr, left_hand, right_hand)
                     )
                 }
+
                 TokenType::BitwiseXor => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
@@ -306,6 +310,7 @@ impl <'a> Parser<'a> {
                         AstNode::BinaryOperation(BinaryOperationType::BitwiseXor, left_hand, right_hand)
                     )
                 }
+
                 TokenType::BitwiseLeftShift => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
@@ -313,6 +318,7 @@ impl <'a> Parser<'a> {
                         AstNode::BinaryOperation(BinaryOperationType::BitwiseLeftShift, left_hand, right_hand)
                     )
                 }
+
                 TokenType::BitwiseRightShift => {
                     self.advance().unwrap();
                     let right_hand = self.parse_term()?;
@@ -320,6 +326,7 @@ impl <'a> Parser<'a> {
                         AstNode::BinaryOperation(BinaryOperationType::BitwiseRightShift, left_hand, right_hand)
                     )
                 }
+
                 _ => {
                     break;
                 }

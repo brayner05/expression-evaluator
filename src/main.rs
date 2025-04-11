@@ -2,8 +2,7 @@ mod lexer;
 mod parser;
 mod expression;
 
-use core::fmt;
-use std::io::{self, Write};
+use std::{io::{self, Write}, rc::Rc};
 use expression::{execute, Value};
 use lexer::Lexer;
 use parser::Parser;
@@ -43,9 +42,12 @@ fn compute_expression(raw_expression: &str) -> Result<Value, pxpr::Error> {
     let mut tokenizer = Lexer::new(raw_expression);
 
     // Convert the expression to a stream of tokens.
-    let tokens = tokenizer.tokenize()?;
+    let tokens = tokenizer.tokenize()?
+                    .into_iter()
+                    .map(|b| Rc::new(b.as_ref().clone()))
+                    .collect();
 
-    let mut parser = Parser::new(tokens);
+    let mut parser = Parser::new(&tokens);
 
     // Convert the token stream to an abstract syntax tree.
     let ast = parser.parse()?;

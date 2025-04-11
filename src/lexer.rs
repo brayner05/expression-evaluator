@@ -3,7 +3,7 @@ use std::fmt;
 use crate::pxpr;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
     // Miscellaneaous
     EOF,
@@ -30,7 +30,7 @@ impl fmt::Display for TokenType {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenValue {
     Float(f64),
     Integer(i64),
@@ -69,7 +69,7 @@ impl fmt::Display for TokenValue {
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub type_: TokenType,
     pub lexeme: String,
